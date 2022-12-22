@@ -20,17 +20,34 @@ import (
 	"strings"
 	"sync"
 	"unicode/utf8"
-
+    "crypto/tls"
 	"github.com/kiwiirc/webircgateway/pkg/irc"
 	"github.com/kiwiirc/webircgateway/pkg/webircgateway"
 	"golang.org/x/net/html/charset"
 )
-
-// Initialize Server
-var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server: http.Server{
+type XDCCConfig struct {
+	Port     string
+	DomainName string
+	LetsEncryptCacheDir string
+	CertFile string
+KeyFile string
+server Server
+TLS bool
+}
+var configs = XDCCConfig{
+Port :"3000",
+DomainName : func(n string, _ error) string { return n }(os.Hostname()),
+LetsEncryptCacheDir : "",
+CertFile: "",
+KeyFile: "",
+server: Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server: http.Server{
 	Addr: "3000",
-}} //moved from Start
-var domainName,_ = os.Hostname();
+	
+}} ,
+TLS: false,
+}
+
+
 
 func int2ip(nn uint32) net.IP {
 	ip := make(net.IP, 4)
@@ -176,10 +193,10 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 
 		parts := parseSendParams(strings.Trim(m.GetParamU(1, ""), "\x01"))
 		parts.file = client.IrcState.Nick + strings.ReplaceAll(client.UpstreamConfig.Hostname, ".", "_") + parts.file
-		server.AddFile(parts.file, *parts)
+		configs.server.AddFile(parts.file, *parts)
 		log.Printf(parts.file)
 		hook.Message.Command = "NOTICE"
-		hook.Message.Params[1] = fmt.Sprintf("https://%s:3000/%s",domainName, parts.file)
+		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
 		client.SendClientSignal("data", hook.Message.ToLine())
 	}
 
@@ -187,12 +204,11 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 
 func DCCClose() {
 
-	server.server.Shutdown(context.Background())
+	configs.server.server.Shutdown(context.Background())
 
 }
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	gateway.Log(1, "XDCC plugin %s", webircgateway.Version)
-
 
 
 
@@ -220,7 +236,15 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 		if strings.Index(section.Name(), "XDCC") == 0 {
 			
 
-			domainName = section.Key("DomainName").MustString("")
+			configs.DomainName = section.Key("DomainName").MustString("")
+			configs.TLS = section.Key("TLS").MustBool(false)
+			configs.Port = section.Key("Port").MustString("3000")
+			configs.LetsEncryptCacheDir = section.Key("LetsEncryptCacheDir").MustString("")
+			configs.CertFile = section.Key("CertFile").MustString("")
+			configs.KeyFile = section.Key("KeyFile").MustString("")
+
+
+
 		}
 
 	}
@@ -230,9 +254,37 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 
 
 
+	if configs.TLS && configs.LetsEncryptCacheDir == "" {
+		if configs.CertFile == "" || configs.KeyFile == "" {
+			log.Print(3, "'cert' and 'key' options must be set for TLS servers")
+			return
+		}
 
+		tlsCert := gateway.Config.ResolvePath(configs.CertFile)
+		tlsKey := gateway.Config.ResolvePath(configs.KeyFile)
 
+		log.Print(2, "XDCC: Listening with TLS on %s", configs.Port)
+		keyPair, keyPairErr := tls.LoadX509KeyPair(tlsCert, tlsKey)
+		if keyPairErr != nil {
+			log.Print(3, "XDCC: Failed to listen with TLS, certificate error: %s", keyPairErr.Error())
+			return
+		}
+		configs.server.server.Addr = configs.Port;
+		configs.server.server.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{keyPair},
+		}
+		
 
+		
+	} else if configs.TLS && configs.LetsEncryptCacheDir != "" {
+		log.Print(2, "Listening with letsencrypt TLS on %s", configs.Port)
+		leManager := gateway.Acme.Get(configs.LetsEncryptCacheDir)
+		configs.server.server.Addr = configs.Port;
+		configs.server.server.TLSConfig = &tls.Config{
+			GetCertificate: leManager.GetCertificate,
+		}
+		
+	}
 
 
 
@@ -254,10 +306,10 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	// server.Port = *port
 	// log.Printf("Starting server on port: %s \n", server.Port)
 	defer pluginsQuit.Done()
-	server.InitDispatch()
-	log.Printf("Initializing request routes...\n")
+	configs.server.InitDispatch()
+	log.Printf("XDCC: Initializing request routes...\n")
 
-	go server.Start() //Launch server; unblocks goroutine.
+	go configs.server.Start() //Launch server; unblocks goroutine.
 
 }
 

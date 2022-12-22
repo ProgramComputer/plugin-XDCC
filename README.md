@@ -22,7 +22,14 @@ For example,
 [plugins]
 ./lorem/ipsum/plugin-XDCC.so
 ```
-and under ``[XDCC]`` put a domain name or IP address without port when local.
+and under ``[XDCC]`` set the following keys
+- Port     3000
+- DomainName (REQUIRED)
+- TLS bool
+  - LetsEncryptCacheDir ""
+  - CertFile ""
+  - KeyFile ""
+
 For example,
 ```console
 [plugins]
