@@ -167,6 +167,8 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 	pLen := len(m.Params)
 	log.Printf("I AM OUT\n")
 	log.Printf(m.Command)
+	log.Print(strings.Trim(m.GetParamU(1, ""), "\x01"))
+    log.Print(pLen)
 
 	if pLen > 0 && m.Command == "PRIVMSG" && strings.HasPrefix(strings.Trim(m.GetParamU(1, ""), "\x01"), "DCC SEND") { //can be moved to plugin goto hook.dispatch("irc.line")
 
