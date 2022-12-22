@@ -1,4 +1,4 @@
-module github.com/ProgramComputer/webircgateway-xdcc
+module github.com/ProgramComputer/plugin-XDCC
 replace github.com/kiwiirc/webircgateway  => ../webircgateway
 
 go 1.13
