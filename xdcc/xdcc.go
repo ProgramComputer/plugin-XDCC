@@ -4,8 +4,11 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/exec"
 
 	"github.com/gorilla/mux"
+	"gopkg.in/ini.v1"
 
 	"encoding/binary"
 	"fmt"
@@ -27,6 +30,8 @@ import (
 var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server: http.Server{
 	Addr: "3000",
 }} //moved from Start
+var domainName,_ = os.Hostname();
+
 func int2ip(nn uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, nn)
@@ -174,7 +179,7 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		server.AddFile(parts.file, *parts)
 		log.Printf(parts.file)
 		hook.Message.Command = "NOTICE"
-		hook.Message.Params[1] = fmt.Sprintf("<a>%s download</a>", parts.file)
+		hook.Message.Params[1] = fmt.Sprintf("https://%s:3000/%s",domainName, parts.file)
 		client.SendClientSignal("data", hook.Message.ToLine())
 	}
 
@@ -187,6 +192,58 @@ func DCCClose() {
 }
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	gateway.Log(1, "XDCC plugin %s", webircgateway.Version)
+
+
+
+
+	var configSrc interface{}
+
+	if strings.HasPrefix(gateway.Config.ConfigFile, "$ ") {
+		cmdRawOut, err := exec.Command("sh", "-c", gateway.Config.ConfigFile[2:]).Output()
+		if err != nil {
+			return 
+		}
+
+		configSrc = cmdRawOut
+	} else {
+		configSrc = gateway.Config.ConfigFile
+	}
+
+	cfg, err := ini.LoadSources(ini.LoadOptions{AllowBooleanKeys: true, SpaceBeforeInlineComment: true}, configSrc)
+	if err != nil {
+		return
+	}
+
+	
+
+	for _, section := range cfg.Sections() {
+		if strings.Index(section.Name(), "XDCC") == 0 {
+			
+
+			domainName = section.Key("DomainName").MustString("")
+		}
+
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	webircgateway.HookRegister("irc.line", DCCSend)
 	webircgateway.HookRegister("gateway.closing", DCCClose)
@@ -249,7 +306,7 @@ func (s *Server) InitDispatch() {
 		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
 
 		//destroy route
-		s.Destroy(name) //route is destroyed when served TODO destroy when TIMEDOUT
+		s.Destroy(name) //TODO destroy when TIMEDOUT or  destroy when client use hook client.state
 
 	}).Methods("GET")
 }

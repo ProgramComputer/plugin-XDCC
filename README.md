@@ -16,12 +16,20 @@ in directory containing xdcc.go file.
 Server runs on port 3000.
 
 In config.conf,
-under "[plugins]" put the path to xdcc.so file 
+under ```[plugins]``` put the path to xdcc.so file.
 For example,
 ```console
 [plugins]
-./lorem/ipsum/xdcc.so
+./lorem/ipsum/plugin-XDCC.so
 ```
+and under ``[XDCC]`` put a domain name or IP address without port when local.
+For example,
+```console
+[plugins]
+DomainName = lorem.ipsum.dolor.sit
+```
+
+Note- Currently SIGHUP on webircgateway will not reload this section. Webircgateway should be restarted.
 ## Commands
 - [x] XDCC SEND
 - [ ] XDCC RESUME
