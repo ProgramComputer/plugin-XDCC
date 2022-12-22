@@ -26,8 +26,9 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Test
-        run: 
+        run: |
           ls -al
+          
           ci/test.sh
 
       - name: Build
