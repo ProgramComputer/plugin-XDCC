@@ -24,7 +24,7 @@ import (
 )
 
 // Initialize Server
-var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server:  http.Server{
+var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server: http.Server{
 	Addr: "3000",
 }} //moved from Start
 func int2ip(nn uint32) net.IP {
@@ -82,7 +82,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//	println(parts.port)
 	if parts.ip == nil {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404 - You tried")) 
+		w.Write([]byte("404 - You tried"))
 		return
 	}
 	conn, err := net.Dial("tcp", ipPort)
@@ -143,9 +143,12 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//	println(status)
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
+	log.Printf("I AM IN\n")
+
 	if hook.Halt || !hook.ToServer {
 		return
 	}
+	log.Printf("I AM OUT\n")
 	client := hook.Client
 	// Plugins may have modified the data
 	data := hook.Line
@@ -165,44 +168,39 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 
 	pLen := len(m.Params)
 	if pLen > 0 && m.Command == "PRIVMSG" && strings.HasPrefix(strings.Trim(m.GetParamU(1, ""), "\x01"), "DCC SEND") { //can be moved to plugin goto hook.dispatch("irc.line")
-		
 
 		parts := parseSendParams(strings.Trim(m.GetParamU(1, ""), "\x01"))
-        parts.file = client.IrcState.Nick + strings.ReplaceAll(client.UpstreamConfig.Hostname, ".", "_") + parts.file
+		parts.file = client.IrcState.Nick + strings.ReplaceAll(client.UpstreamConfig.Hostname, ".", "_") + parts.file
 		server.AddFile(parts.file, *parts)
 		log.Printf(parts.file)
 		hook.Message.Command = "NOTICE"
-	 hook.Message.Params[1] = fmt.Sprintf("<a>%s download</a>",parts.file);
-	 client.SendClientSignal("data",hook.Message.ToLine())
+		hook.Message.Params[1] = fmt.Sprintf("<a>%s download</a>", parts.file)
+		client.SendClientSignal("data", hook.Message.ToLine())
 	}
-	
-	
 
 }
 
 func DCCClose() {
 
+	server.server.Shutdown(context.Background())
 
-		server.server.Shutdown(context.Background());
-	
 }
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	gateway.Log(1, "XDCC plugin %s", webircgateway.Version)
 
 	webircgateway.HookRegister("irc.line", DCCSend)
-	webircgateway.HookRegister("gateway.closing",DCCClose)
+	webircgateway.HookRegister("gateway.closing", DCCClose)
 
 	// var port = flag.String("port", "3000", "Default: 3000; Set the port for the web-server to accept incoming requests")
 	// flag.Parse()
 
 	// server.Port = *port
 	// log.Printf("Starting server on port: %s \n", server.Port)
-defer pluginsQuit.Done();
+	defer pluginsQuit.Done()
 	server.InitDispatch()
 	log.Printf("Initializing request routes...\n")
 
 	go server.Start() //Launch server; unblocks goroutine.
-	
 
 }
 
@@ -216,7 +214,7 @@ type Server struct {
 
 func (s *Server) Start() {
 
-	 http.ListenAndServe(":"+s.Port, s.Dispatcher)
+	http.ListenAndServe(":"+s.Port, s.Dispatcher)
 }
 
 // InitDispatch routes.
@@ -238,7 +236,7 @@ func (s *Server) InitDispatch() {
 	//     s.Destroy(name)
 	// }).Methods("GET")
 
-	d.HandleFunc("/{name}", func(w http.ResponseWriter, r *http.Request) { 
+	d.HandleFunc("/{name}", func(w http.ResponseWriter, r *http.Request) {
 		//Lookup handler in map and call it, proxying this writer and request
 		vars := mux.Vars(r)
 		name := vars["name"]
@@ -247,7 +245,6 @@ func (s *Server) InitDispatch() {
 
 		parts := s.fileNames[name]
 
-	
 		//call serveFile here
 		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
 
