@@ -1,9 +1,0 @@
-/plugins/*.so
-/vendor/
-.vscode
-.idea
-extensions
-config.conf
-*.a
-*.crt
-*.key
