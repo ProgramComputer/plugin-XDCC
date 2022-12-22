@@ -1,8 +1,11 @@
 name: release
 
 on:
-  release:
-    types: [published]
+  push
+ # release:
+ #   types: [published]
+  
+    
 
 jobs:
   golang:
@@ -23,10 +26,19 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Test
-        run: ci/test.sh
+        run: |
+          git submodule init
+          git submodule update
+          cd ./xdcc/
+          
+          ../ci/test.sh
 
       - name: Build
-        run: ci/build.sh
+        run: |
+          git submodule init
+          git submodule update
+          cd ./xdcc/
+          ../ci/build.sh
 
       - name: Prepare release version
         run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
