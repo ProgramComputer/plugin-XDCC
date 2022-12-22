@@ -29,12 +29,12 @@ jobs:
         run: |
           cd ./xdcc/
           
-          ci/test.sh
+          ../ci/test.sh
 
       - name: Build
         run: |
           cd ./xdcc/
-          ci/build.sh
+          ../ci/build.sh
 
       - name: Prepare release version
         run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
