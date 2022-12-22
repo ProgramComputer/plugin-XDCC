@@ -91,7 +91,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	}
 
 	pr, pw := io.Pipe()
-	fmt.Println("I am in")
+	
 
 	contentDisposition := fmt.Sprintf("attachment; filename=%s", parts.file)
 	w.Header().Set("Content-Disposition", contentDisposition)
@@ -143,12 +143,10 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//	println(status)
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
-	log.Printf("I AM IN\n")
 
 	if hook.Halt || !hook.ToServer {
 		return
 	}
-	log.Printf("I AM OUT\n")
 	client := hook.Client
 	// Plugins may have modified the data
 	data := hook.Line
@@ -167,6 +165,9 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 	}
 
 	pLen := len(m.Params)
+	log.Printf("I AM OUT\n")
+	log.Printf(m.Command)
+
 	if pLen > 0 && m.Command == "PRIVMSG" && strings.HasPrefix(strings.Trim(m.GetParamU(1, ""), "\x01"), "DCC SEND") { //can be moved to plugin goto hook.dispatch("irc.line")
 
 		parts := parseSendParams(strings.Trim(m.GetParamU(1, ""), "\x01"))
