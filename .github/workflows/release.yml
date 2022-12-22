@@ -27,14 +27,18 @@ jobs:
 
       - name: Test
         run: |
+          git submodule init
+          git submodule update
           cd ./xdcc/
           
-          ../ci/test.sh
+          ci/test.sh
 
       - name: Build
         run: |
+          git submodule init
+          git submodule update
           cd ./xdcc/
-          ../ci/build.sh
+          ci/build.sh
 
       - name: Prepare release version
         run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
