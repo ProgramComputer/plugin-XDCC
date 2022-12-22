@@ -23,7 +23,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Test
-        run: sudo ci/test.sh
+        run: ci/test.sh
 
       - name: Build
         run:  ci/build.sh
