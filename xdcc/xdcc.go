@@ -143,7 +143,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//	println(status)
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
-	if hook.Halt {
+	if hook.Halt || !hook.ToServer {
 		return
 	}
 	client := hook.Client
@@ -171,7 +171,12 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
         parts.file = client.IrcState.Nick + strings.ReplaceAll(client.UpstreamConfig.Hostname, ".", "_") + parts.file
 		server.AddFile(parts.file, *parts)
 		log.Printf(parts.file)
+		hook.Message.Command = "NOTICE"
+	 hook.Message.Params[1] = fmt.Sprintf("<a>%s download</a>",parts.file);
+	 client.SendClientSignal("data",hook.Message.ToLine())
 	}
+	
+	
 
 }
 
