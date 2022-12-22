@@ -243,7 +243,6 @@ func (s *Server) InitDispatch() {
 		parts := s.fileNames[name]
 
 	
-
 		//call serveFile here
 		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
 
