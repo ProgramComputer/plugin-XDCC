@@ -1,4 +1,4 @@
-# xdcc plugin
+# File sharing for [webircgateway](https://github.com/kiwiirc/webircgateway)
 **A simple plugin to do xdcc for webircgateway to IRC networks for any web client**
 
 ### Overview
@@ -22,4 +22,6 @@ For example,
 [plugins]
 ./lorem/ipsum/xdcc.so
 ```
+## License
+[ Licensed under the Apache License, Version 2.0](LICENSE).
 
