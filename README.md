@@ -22,6 +22,19 @@ For example,
 [plugins]
 ./lorem/ipsum/xdcc.so
 ```
+## Commands
+- [x] XDCC SEND
+- [ ] XDCC RESUME
+- [ ] XDCC ACCEPT
+- [ ] XDCC REMOVE
+- [x] XDCC CANCEL
+- [ ] XDCC BATCH
+- [ ] XDCC QUEUE
+- [ ] XDCC INFO
+- [ ] XDCC GET
+- [x] XDCC STOP
+- [x] XDCC HELP
+- [x] XDCC SEARCH
 ## License
 [ Licensed under the Apache License, Version 2.0](LICENSE).
 
