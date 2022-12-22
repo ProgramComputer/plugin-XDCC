@@ -1,0 +1,8 @@
+xdcc.so
+/vendor/
+.vscode
+.idea
+extensions
+*.a
+*.crt
+*.key

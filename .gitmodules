@@ -1,0 +1,3 @@
+[submodule "webircgateway"]
+	path = webircgateway
+	url = https://github.com/kiwiirc/webircgateway
