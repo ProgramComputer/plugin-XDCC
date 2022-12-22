@@ -25,7 +25,7 @@ jobs:
       - name: Test
         run: |
             chmod 777 test.sh
-            ci/test.sh
+            sudo ci/test.sh
 
       - name: Build
         run: |
