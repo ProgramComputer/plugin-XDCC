@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/gorilla/mux"
@@ -23,7 +24,9 @@ import (
 )
 
 // Initialize Server
-var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts)} //moved from Start
+var server = &Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server:  http.Server{
+	Addr: "3000",
+}} //moved from Start
 func int2ip(nn uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, nn)
@@ -171,21 +174,30 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 	}
 
 }
+
+func DCCClose() {
+
+
+		server.server.Shutdown(context.Background());
+	
+}
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	gateway.Log(1, "XDCC plugin %s", webircgateway.Version)
 
 	webircgateway.HookRegister("irc.line", DCCSend)
+	webircgateway.HookRegister("gateway.closing",DCCClose)
 
 	// var port = flag.String("port", "3000", "Default: 3000; Set the port for the web-server to accept incoming requests")
 	// flag.Parse()
 
 	// server.Port = *port
 	// log.Printf("Starting server on port: %s \n", server.Port)
-
+defer pluginsQuit.Done();
 	server.InitDispatch()
 	log.Printf("Initializing request routes...\n")
 
 	go server.Start() //Launch server; unblocks goroutine.
+	
 
 }
 
@@ -194,11 +206,12 @@ type Server struct {
 	Dispatcher *mux.Router
 	fileNames  map[string]ParsedParts
 	Port       string
+	server     http.Server
 }
 
 func (s *Server) Start() {
 
-	http.ListenAndServe(":"+s.Port, s.Dispatcher)
+	 http.ListenAndServe(":"+s.Port, s.Dispatcher)
 }
 
 // InitDispatch routes.
@@ -235,7 +248,7 @@ func (s *Server) InitDispatch() {
 		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
 
 		//destroy route
-		s.Destroy(name)
+		s.Destroy(name) //route is destroyed when served TODO destroy when TIMEDOUT
 
 	}).Methods("GET")
 }
