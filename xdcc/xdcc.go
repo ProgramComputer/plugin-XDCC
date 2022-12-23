@@ -6,9 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-
 	"github.com/gorilla/mux"
 	"gopkg.in/ini.v1"
+	  "golang.org/x/exp/maps"
+
 
 	"encoding/binary"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -25,6 +25,24 @@ import (
 	"github.com/kiwiirc/webircgateway/pkg/webircgateway"
 	"golang.org/x/net/html/charset"
 )
+
+func remove[T comparable](l []T, item T) []T{
+	for i, other := range l{
+		if other == item{
+			return append(l[:i],l[i+1:]...)
+		}
+	}
+	return l
+}
+
+// Server muxer, dynamic map of handlers, and listen port.
+type Server struct {
+	Dispatcher *mux.Router
+	fileNames  map[string]ParsedParts
+	clientsMap map[string][]string
+	Port       string
+	server     http.Server
+}
 type XDCCConfig struct {
 	Port     string
 	DomainName string
@@ -40,13 +58,12 @@ DomainName : func(n string, _ error) string { return n }(os.Hostname()),
 LetsEncryptCacheDir : "",
 CertFile: "",
 KeyFile: "",
-server: Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), server: http.Server{
+server: Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts),clientsMap: make(map[string][]string), server: http.Server{
 	Addr: "3000",
 	
 }} ,
 TLS: false,
 }
-
 
 
 func int2ip(nn uint32) net.IP {
@@ -60,6 +77,10 @@ type ParsedParts struct {
 	file   string
 	port   int
 	length int64
+	receiverNick string
+	senderNick string
+	serverHostname string
+
 }
 
 func parseSendParams(text string) *ParsedParts {
@@ -143,26 +164,10 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//     defer pw.Close()
 
 	//     // write json data to the PipeReader through the PipeWriter
-	//     if err := json.NewEncoder(pw).Encode(&PayLoad{Content: "Hello Pipe!"}); err != nil {
-	//         log.Fatal(err)
-	//     }
+	//    
 	// }()
 
-	// JSON from the PipeWriter lands in the PipeReader
-	// ...and we send it off...
-	// if _, err := http.Post("http://example.com", "application/json", pr); err != nil {
-	//     log.Fatal(err)
-	// }
-	// // 		url, _ := url.Parse("http://nginx-server/")
-	// proxy := httputil.NewSingleHostReverseProxy(url)
-	// proxy.FlushInterval = -1
-
-	// //router.PathPrefix("/video").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//        go proxy.ServeHTTP(w, r)
-	//})
-	//use the go keyword somewhere
-
-	//	println(status)
+	
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
 
@@ -192,19 +197,45 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 	if pLen > 0 && m.Command == "PRIVMSG" && strings.HasPrefix(strings.Trim(m.GetParamU(1, ""), "\x01"), "DCC SEND") { //can be moved to plugin goto hook.dispatch("irc.line")
 
 		parts := parseSendParams(strings.Trim(m.GetParamU(1, ""), "\x01"))
-		parts.file = client.IrcState.Nick + strings.ReplaceAll(client.UpstreamConfig.Hostname, ".", "_") + parts.file
+		parts.receiverNick = client.IrcState.Nick
+		parts.senderNick = m.Prefix.Nick
+		parts.serverHostname = client.UpstreamConfig.Hostname
+		parts.file = parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file
+	    hook.Message.Command = "NOTICE"
+		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
+		
+		_, ok := configs.server.fileNames[parts.file]
+		if ok{
+			client.SendClientSignal("data", hook.Message.ToLine())
+
+			return
+		}
+		
 		configs.server.AddFile(parts.file, *parts)
 		log.Printf(parts.file)
-		hook.Message.Command = "NOTICE"
-		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
+		
 		client.SendClientSignal("data", hook.Message.ToLine())
 	}
 
 }
 
-func DCCClose() {
+func DCCClose(hook *webircgateway.HookGatewayClosing) {
 
 	configs.server.server.Shutdown(context.Background())
+
+}
+func ClientClose(hook *webircgateway.HookClientState){
+	if !hook.Connected{
+		oldKeys := maps.Keys(configs.server.clientsMap)
+
+    for i := range oldKeys {
+        if strings.HasPrefix(oldKeys[i],hook.Client.IrcState.Nick + strings.ReplaceAll(hook.Client.UpstreamConfig.Hostname, ".", "_")) {
+			delete(configs.server.clientsMap,oldKeys[i] )
+		}
+    }
+
+		
+	}
 
 }
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
@@ -299,6 +330,8 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 
 	webircgateway.HookRegister("irc.line", DCCSend)
 	webircgateway.HookRegister("gateway.closing", DCCClose)
+	webircgateway.HookRegister("client.state", ClientClose)
+
 
 	// var port = flag.String("port", "3000", "Default: 3000; Set the port for the web-server to accept incoming requests")
 	// flag.Parse()
@@ -313,13 +346,7 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 
 }
 
-// Server muxer, dynamic map of handlers, and listen port.
-type Server struct {
-	Dispatcher *mux.Router
-	fileNames  map[string]ParsedParts
-	Port       string
-	server     http.Server
-}
+
 
 func (s *Server) Start() {
 
@@ -358,14 +385,14 @@ func (s *Server) InitDispatch() {
 		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
 
 		//destroy route
-		s.Destroy(name) //TODO destroy when TIMEDOUT or  destroy when client use hook client.state
+		s.Destroy(parts) 
 
 	}).Methods("GET")
 }
 
-func (s *Server) Destroy(fName string) {
-	delete(s.fileNames, fName)
-
+func (s *Server) Destroy(parts ParsedParts) {
+	delete(s.fileNames, parts.file) 
+	s.clientsMap[parts.receiverNick+ strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick] = remove(s.clientsMap[parts.receiverNick+ strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick],parts.file)
 }
 
 // func (s *Server) ProxyCall(w http.ResponseWriter, r *http.Request, fName string) {
@@ -380,4 +407,8 @@ func (s *Server) AddFile( /*w http.ResponseWriter, r *http.Request,*/ fName stri
 	// }
 	//store the parts and the hook
 	s.fileNames[fName] = parts // Add the handler to our map
+
+	configs.server.clientsMap[parts.receiverNick  +  strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick] = append(configs.server.clientsMap[parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_")+ parts.senderNick],fName)
+
+
 }
