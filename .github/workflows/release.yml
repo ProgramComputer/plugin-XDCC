@@ -23,7 +23,7 @@ jobs:
           v: true
           x: false
           race: false
-          ldflags: "-X main.buildStamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.gitRevision=`git describe --tags || git rev-parse HEAD` -s -w" 
+          ldflags: -X main.buildStamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.gitRevision=`git describe --tags || git rev-parse HEAD` -s -w 
           buildmode: plugin
           trimpath: false
 
