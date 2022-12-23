@@ -1,8 +1,7 @@
 name: release
 
 on:
-  release:
-    types: [published]
+  push
   
     
 
@@ -11,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: cd
+        run: cd xdcc
       -
         name: Build
         uses: crazy-max/ghaction-xgo@v2
