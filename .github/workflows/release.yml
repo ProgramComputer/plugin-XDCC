@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cd
-        run: cd xdcc
       -
         name: Build
         uses: crazy-max/ghaction-xgo@v2
@@ -27,6 +25,7 @@ jobs:
           ldflags: -s -w
           buildmode: plugin
           trimpath: false
+          pkg: xdcc
 
       - name: Prepare release version
         run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
