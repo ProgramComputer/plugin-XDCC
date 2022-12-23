@@ -203,7 +203,7 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		parts.senderNick = m.Prefix.Nick
 		parts.serverHostname = client.UpstreamConfig.Hostname
 
-		//TODO when wfile has no extension PARTS file
+		//TODO when file has no extension PARTS file
 		lastIndex := strings.LastIndex(parts.file,".")
 
 
