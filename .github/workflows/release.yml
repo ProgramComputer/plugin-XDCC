@@ -17,20 +17,21 @@ jobs:
         with:
           xgo_version: latest
           go_version: 1.18
-          dest: dist
-          prefix: plugin-xdcc
+          dest: ../dist
+          working_dir: xdcc
           targets: linux/amd64,linux/arm64,darwin/arm64
           v: true
           x: false
           race: false
-          ldflags: -s -w
           buildmode: plugin
-          trimpath: false
+          trimpath: true
 
       - name: Prepare release version
         run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
-
+      - name: print
+        run: |
+            ls -R
       - uses: AButler/upload-release-assets@v2.0
         with:
-          files: 'dist/*'
+          files: './dist/github.com/ProgramComputer/*'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
