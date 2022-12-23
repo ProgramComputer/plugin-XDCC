@@ -36,5 +36,5 @@ jobs:
             cd ..
       - uses: AButler/upload-release-assets@v2.0
         with:
-          files: './dist/*'
+          files: './dist/github.com/ProgramComputer/*'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
