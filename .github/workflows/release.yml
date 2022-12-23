@@ -31,9 +31,6 @@ jobs:
       - name: print
         run: |
             ls -R
-            cd ./dist
-            for i in */; do tar -czvf "${i%/}.tar.gz" "$i"; done
-            cd ..
       - uses: AButler/upload-release-assets@v2.0
         with:
           files: './dist/github.com/ProgramComputer/*'
