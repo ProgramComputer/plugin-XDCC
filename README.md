@@ -2,7 +2,7 @@
 **A simple plugin to do xdcc for webircgateway to IRC networks for any web client**
 
 ### Overview
-This plugin currently supports DCC SEND.
+This plugin currently supports XDCC SEND.
 
 
 ### Building and development
@@ -38,6 +38,7 @@ DomainName = lorem.ipsum.dolor.sit
 
 Note- Currently SIGHUP on webircgateway will not reload this section. Webircgateway should be restarted.
 ## Commands
+- [ ] DCC SEND
 - [x] XDCC SEND
 - [ ] XDCC RESUME
 - [ ] XDCC ACCEPT
