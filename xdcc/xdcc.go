@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/mux"
 	"gopkg.in/ini.v1"
 	  "golang.org/x/exp/maps"
+	 "github.com/gosimple/slug"
+	 
 
 
 	"encoding/binary"
@@ -200,7 +202,8 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		parts.receiverNick = client.IrcState.Nick
 		parts.senderNick = m.Prefix.Nick
 		parts.serverHostname = client.UpstreamConfig.Hostname
-		parts.file = parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file
+		lastIndex := strings.LastIndex(parts.file,".")
+		parts.file = slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)-1] //long URLs may not work
 	    hook.Message.Command = "NOTICE"
 		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
 		

@@ -1,0 +1,85 @@
+# github.com/OneOfOne/xxhash v1.2.8
+## explicit; go 1.11
+github.com/OneOfOne/xxhash
+# github.com/gobwas/glob v0.2.3
+## explicit
+github.com/gobwas/glob
+github.com/gobwas/glob/compiler
+github.com/gobwas/glob/match
+github.com/gobwas/glob/syntax
+github.com/gobwas/glob/syntax/ast
+github.com/gobwas/glob/syntax/lexer
+github.com/gobwas/glob/util/runes
+github.com/gobwas/glob/util/strings
+# github.com/golang-jwt/jwt/v4 v4.4.2
+## explicit; go 1.16
+github.com/golang-jwt/jwt/v4
+# github.com/gorilla/mux v1.8.0
+## explicit; go 1.12
+github.com/gorilla/mux
+# github.com/gorilla/websocket v1.5.0
+## explicit; go 1.12
+github.com/gorilla/websocket
+# github.com/gosimple/slug v1.13.1
+## explicit; go 1.11
+github.com/gosimple/slug
+# github.com/gosimple/unidecode v1.0.1
+## explicit; go 1.16
+github.com/gosimple/unidecode
+# github.com/igm/sockjs-go/v3 v3.0.2
+## explicit; go 1.14
+github.com/igm/sockjs-go/v3/sockjs
+# github.com/kiwiirc/webircgateway v0.0.0-20221028163248-bb110ab6c4ca => ../webircgateway
+## explicit; go 1.13
+github.com/kiwiirc/webircgateway/pkg/dnsbl
+github.com/kiwiirc/webircgateway/pkg/identd
+github.com/kiwiirc/webircgateway/pkg/irc
+github.com/kiwiirc/webircgateway/pkg/proxy
+github.com/kiwiirc/webircgateway/pkg/recaptcha
+github.com/kiwiirc/webircgateway/pkg/webircgateway
+# github.com/orcaman/concurrent-map v1.0.0
+## explicit
+github.com/orcaman/concurrent-map
+# golang.org/x/crypto v0.1.0
+## explicit; go 1.17
+golang.org/x/crypto/acme
+golang.org/x/crypto/acme/autocert
+# golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
+## explicit; go 1.18
+golang.org/x/exp/maps
+# golang.org/x/net v0.1.0
+## explicit; go 1.17
+golang.org/x/net/html
+golang.org/x/net/html/atom
+golang.org/x/net/html/charset
+golang.org/x/net/idna
+golang.org/x/net/websocket
+# golang.org/x/text v0.4.0
+## explicit; go 1.17
+golang.org/x/text/encoding
+golang.org/x/text/encoding/charmap
+golang.org/x/text/encoding/htmlindex
+golang.org/x/text/encoding/internal
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/encoding/japanese
+golang.org/x/text/encoding/korean
+golang.org/x/text/encoding/simplifiedchinese
+golang.org/x/text/encoding/traditionalchinese
+golang.org/x/text/encoding/unicode
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/tag
+golang.org/x/text/internal/utf8internal
+golang.org/x/text/language
+golang.org/x/text/runes
+golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+# golang.org/x/time v0.1.0
+## explicit
+golang.org/x/time/rate
+# gopkg.in/ini.v1 v1.67.0
+## explicit
+gopkg.in/ini.v1
+# github.com/kiwiirc/webircgateway => ../webircgateway
