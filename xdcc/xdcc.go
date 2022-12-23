@@ -202,9 +202,14 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		parts.receiverNick = client.IrcState.Nick
 		parts.senderNick = m.Prefix.Nick
 		parts.serverHostname = client.UpstreamConfig.Hostname
+
+		//TODO when wfile has no extension PARTS file
 		lastIndex := strings.LastIndex(parts.file,".")
+
+
 		parts.file = slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)] //long URLs may not work
-	    hook.Message.Command = "NOTICE"
+	    
+		hook.Message.Command = "NOTICE"
 		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
 		
 		_, ok := configs.server.fileNames[parts.file]
