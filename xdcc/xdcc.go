@@ -119,7 +119,7 @@ func ensureUtf8(s string, fromEncoding string) string {
 	return s2
 }
 
-func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
+func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work bool) {
 
 	ipPort := fmt.Sprintf("%s:%d", parts.ip.String(), parts.port)
 	//println(strings.Trim(m.GetParamU(1,""),"\x01"))
@@ -128,13 +128,13 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	if parts.ip == nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 - You tried"))
-		return
+		return false
 	}
 	conn, err := net.Dial("tcp", ipPort)
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
 		w.Write([]byte(err.Error()))
-		return
+		return false
 	}
 
 	pr, pw := io.Pipe()
@@ -170,6 +170,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	//     // write json data to the PipeReader through the PipeWriter
 	//    
 	// }()
+	return true
 
 	
 }
@@ -393,10 +394,11 @@ func (s *Server) InitDispatch() {
 		parts := s.fileNames[name]
 
 		//call serveFile here
-		serveFile(parts, w, r) //removed go keyword this could mean servFile can only happen once
+		if serveFile(parts, w, r){ //removed go keyword this could mean servFile can only happen once
 
 		//destroy route
 		s.Destroy(parts) 
+}
 
 	}).Methods("GET")
 }
