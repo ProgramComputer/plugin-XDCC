@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"os"
@@ -78,7 +79,7 @@ type ParsedParts struct {
 	ip     net.IP
 	file   string
 	port   int
-	length int64
+	length uint64
 	receiverNick string
 	senderNick string
 	serverHostname string
@@ -92,7 +93,7 @@ func parseSendParams(text string) *ParsedParts {
 	//parts := text.match(/(?:[^\s"]+|"[^"]*")+/g);
 	ipInt, _ := strconv.ParseUint(parts[3], 10, 32)
 	portInt, _ := strconv.ParseInt(parts[4], 10, 0)
-	lengthInt, _ := strconv.ParseInt(parts[5], 10, 64)
+	lengthInt, _ := strconv.ParseUint(parts[5], 10, 64)
 	partsStruct := &ParsedParts{
 		file:   parts[2], /*.replace(/^"(.+)"$/, '$1')*/
 		ip:     int2ip(uint32(ipInt)),
@@ -122,12 +123,27 @@ func ensureUtf8(s string, fromEncoding string) string {
 type WriteCounter struct {
 	Total uint64
 	connection *net.Conn
+	expectedLength uint64
 }
-
+func reverseBytes(input []byte) []byte {
+    if len(input) == 0 {
+        return input
+    }
+    return append(reverseBytes(input[1:]), input[0]) 
+}
 func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
-	binary.Write((*wc.connection), binary.BigEndian, wc.Total)	
+	buf := bytes.NewBuffer([]byte{})
+
+	if wc.expectedLength > 0xffffffff {
+		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())	
+
+	}else{
+	binary.Write(buf, binary.LittleEndian, reverseBytes(buf.Bytes())[0:4])
+
+	}
+	
 	return n, nil
 }
 
@@ -155,6 +171,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	counter := &WriteCounter{
 		connection :&conn,
 		Total: 0,
+		expectedLength: parts.length,
 	}
 
 
@@ -162,7 +179,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	w.Header().Set("Content-Disposition", contentDisposition)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	intLength := int(parts.length)
-	if int64(intLength) != parts.length {
+	if uint64(intLength) != parts.length {
 		panic("overflows!")
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(intLength) /*r.Header.Get("Content-Length")*/)
