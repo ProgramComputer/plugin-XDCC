@@ -208,7 +208,9 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 
 		//TODO when file has no extension PARTS file
 		lastIndex := strings.LastIndex(parts.file,".")
-
+        if(lastIndex == -1){
+			lastIndex = len(parts.file)
+		}
 
 		parts.file = slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)] //long URLs may not work
 	    
