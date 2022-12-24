@@ -132,6 +132,8 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := net.Dial("tcp", ipPort)
 	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
