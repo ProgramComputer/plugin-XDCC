@@ -140,7 +140,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())	
 
 	}else{
-	binary.Write(buf, binary.BigEndian, buf.Bytes()[4:8])
+	binary.Write((*wc.connection), binary.BigEndian, buf.Bytes()[4:8])
 
 	}
 	
