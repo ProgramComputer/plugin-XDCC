@@ -360,7 +360,7 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 
 
 func (s *Server) Start() {
-	log.Print(2, "XDCC: Listening on %s", s.Port)
+	log.Printf("XDCC: Listening on %s", s.Port)
 
 	http.ListenAndServe(":"+s.Port, s.Dispatcher)
 }
