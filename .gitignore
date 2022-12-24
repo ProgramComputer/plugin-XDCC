@@ -3,6 +3,7 @@ plugin-XDCC.so
 .vscode
 .idea
 extensions
+config.conf
 *.a
 *.crt
 *.key
