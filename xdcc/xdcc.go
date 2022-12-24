@@ -6,13 +6,13 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
 	"github.com/gorilla/mux"
+	"github.com/gosimple/slug"
+	"golang.org/x/exp/maps"
 	"gopkg.in/ini.v1"
-	  "golang.org/x/exp/maps"
-	 "github.com/gosimple/slug"
-	 
 
-
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 	"unicode/utf8"
-    "crypto/tls"
+
 	"github.com/kiwiirc/webircgateway/pkg/irc"
 	"github.com/kiwiirc/webircgateway/pkg/webircgateway"
 	"golang.org/x/net/html/charset"
@@ -119,6 +119,19 @@ func ensureUtf8(s string, fromEncoding string) string {
 	return s2
 }
 
+type WriteCounter struct {
+	Total uint64
+	connection *net.Conn
+}
+
+func (wc *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	wc.Total += uint64(n)
+	binary.Write((*wc.connection), binary.BigEndian, wc.Total)	
+	return n, nil
+}
+
+
 func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work bool) {
 
 	ipPort := fmt.Sprintf("%s:%d", parts.ip.String(), parts.port)
@@ -131,6 +144,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 		return false
 	}
 	conn, err := net.Dial("tcp", ipPort)
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
 		w.Write([]byte(err.Error()))
@@ -138,7 +152,11 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	}
 
 	pr, pw := io.Pipe()
-	
+	counter := &WriteCounter{
+		connection :&conn,
+		Total: 0,
+	}
+
 
 	contentDisposition := fmt.Sprintf("attachment; filename=%s", parts.file)
 	w.Header().Set("Content-Disposition", contentDisposition)
@@ -148,7 +166,8 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 		panic("overflows!")
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(intLength) /*r.Header.Get("Content-Length")*/)
-	go io.Copy(pw, conn)
+
+	go io.Copy(pw, io.TeeReader( conn,counter))
 	io.Copy(w, pr)
 	//stream the body to the client without fully loading it into memory
 	// pbw := bufio.NewWriter(conn)
@@ -176,6 +195,9 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
 
+
+
+	//TODO DCC Send To Server
 	if hook.Halt || hook.ToServer {
 		return
 	}
