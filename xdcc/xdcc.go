@@ -125,22 +125,22 @@ type WriteCounter struct {
 	connection *net.Conn
 	expectedLength uint64
 }
-func reverseBytes(input []byte) []byte {
-    if len(input) == 0 {
-        return input
-    }
-    return append(reverseBytes(input[1:]), input[0]) 
-}
+// func reverseBytes(input []byte) []byte {
+//     if len(input) == 0 {
+//         return input
+//     }
+//     return append(reverseBytes(input[1:]), input[0]) 
+// }
 func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
-	buf := bytes.NewBuffer([]byte{})
+	buf := bytes.NewBuffer(make([]byte,8))
 
 	if wc.expectedLength > 0xffffffff {
 		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())	
 
 	}else{
-	binary.Write(buf, binary.LittleEndian, reverseBytes(buf.Bytes())[0:4])
+	binary.Write(buf, binary.BigEndian, buf.Bytes()[4:8])
 
 	}
 	
