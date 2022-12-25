@@ -124,6 +124,7 @@ type WriteCounter struct {
 	Total uint64
 	connection *net.Conn
 	expectedLength uint64
+	writer *io.PipeWriter
 }
 // func reverseBytes(input []byte) []byte {
 //     if len(input) == 0 {
@@ -143,7 +144,9 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	binary.Write((*wc.connection), binary.BigEndian, buf.Bytes()[4:8])
 
 	}
-	
+	if wc.expectedLength == wc.Total{
+		(*wc.writer).Close()
+	}
 	return n, nil
 }
 
@@ -172,6 +175,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 		connection :&conn,
 		Total: 0,
 		expectedLength: parts.length,
+		writer: pw,
 	}
 
 
@@ -184,8 +188,8 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(intLength) /*r.Header.Get("Content-Length")*/)
 
-	go io.Copy(pw, io.TeeReader( conn,counter))
-	io.Copy(w, pr)
+	go io.Copy(pw, io.TeeReader( conn,w))
+	io.Copy(counter, pr)
 	//stream the body to the client without fully loading it into memory
 	// pbw := bufio.NewWriter(conn)
 	// pbr := bufio.NewReader(conn)
@@ -264,7 +268,6 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		}
 		
 		configs.server.AddFile(parts.file, *parts)
-		log.Printf(parts.file)
 		
 		client.SendClientSignal("data", hook.Message.ToLine())
 	}
