@@ -255,7 +255,7 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 			lastIndex = len(parts.file)
 		}
 
-		parts.file = slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)] //long URLs may not work
+		parts.file = strings.ToLower( slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)]) //long URLs may not work
 	    
 		hook.Message.Command = "NOTICE"
 		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
