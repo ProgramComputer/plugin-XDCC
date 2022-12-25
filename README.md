@@ -2,6 +2,8 @@
 **A simple plugin to do xdcc for webircgateway to IRC networks for any web client**
 
 ### Overview
+![demo](./demo.gif)
+
 This plugin currently supports XDCC SEND.
 
 
