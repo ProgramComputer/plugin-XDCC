@@ -15,7 +15,7 @@ go build -buildmode=plugin -o xdcc.so
 ```
 in directory containing xdcc.go file.
 
-Server runs on port 3000 by default.
+File server runs on port 3000 by default.
 
 In config.conf,
 under ```[plugins]``` put the path to xdcc.so file.
