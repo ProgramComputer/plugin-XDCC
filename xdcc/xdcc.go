@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
@@ -29,10 +30,10 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-func remove[T comparable](l []T, item T) []T{
-	for i, other := range l{
-		if other == item{
-			return append(l[:i],l[i+1:]...)
+func remove[T comparable](l []T, item T) []T {
+	for i, other := range l {
+		if other == item {
+			return append(l[:i], l[i+1:]...)
 		}
 	}
 	return l
@@ -47,27 +48,26 @@ type Server struct {
 	server     http.Server
 }
 type XDCCConfig struct {
-	Port     string
-	DomainName string
+	Port                string
+	DomainName          string
 	LetsEncryptCacheDir string
-	CertFile string
-KeyFile string
-server Server
-TLS bool
-}
-var configs = XDCCConfig{
-Port :"3000",
-DomainName : func(n string, _ error) string { return n }(os.Hostname()),
-LetsEncryptCacheDir : "",
-CertFile: "",
-KeyFile: "",
-server: Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts),clientsMap: make(map[string][]string), server: http.Server{
-	Addr: "3000",
-	
-}} ,
-TLS: false,
+	CertFile            string
+	KeyFile             string
+	server              Server
+	TLS                 bool
 }
 
+var configs = XDCCConfig{
+	Port:                "3000",
+	DomainName:          func(n string, _ error) string { return n }(os.Hostname()),
+	LetsEncryptCacheDir: "",
+	CertFile:            "",
+	KeyFile:             "",
+	server: Server{Port: "3000", Dispatcher: mux.NewRouter(), fileNames: make(map[string]ParsedParts), clientsMap: make(map[string][]string), server: http.Server{
+		Addr: "3000",
+	}},
+	TLS: false,
+}
 
 func int2ip(nn uint32) net.IP {
 	ip := make(net.IP, 4)
@@ -76,26 +76,26 @@ func int2ip(nn uint32) net.IP {
 }
 
 type ParsedParts struct {
-	ip     net.IP
-	file   string
-	port   int
-	length uint64
-	receiverNick string
-	senderNick string
+	ip             net.IP
+	file           string
+	port           int
+	length         uint64
+	receiverNick   string
+	senderNick     string
 	serverHostname string
-
 }
 
 func parseSendParams(text string) *ParsedParts {
-	parts := strings.Split(text, " ")
-	//re := regexp.MustCompile(`/(?:[^\s"]+|"[^"]*")+/g`)
-	//fmt.Printf("%q\n", re.FindAllStringSubmatch(text, -1))
-	//parts := text.match(/(?:[^\s"]+|"[^"]*")+/g);
+	re := regexp.MustCompile(`/(?:[^\s"]+|"[^"]*")+/g`)
+	replace := regexp.MustCompile(`^"(.+)"$`)
+
+	parts := re.FindAllString(text, -1)
+
 	ipInt, _ := strconv.ParseUint(parts[3], 10, 32)
 	portInt, _ := strconv.ParseInt(parts[4], 10, 0)
 	lengthInt, _ := strconv.ParseUint(parts[5], 10, 64)
 	partsStruct := &ParsedParts{
-		file:   parts[2], /*.replace(/^"(.+)"$/, '$1')*/
+		file:   replace.ReplaceAllString(parts[2], "$1"),
 		ip:     int2ip(uint32(ipInt)),
 		port:   int(portInt),
 		length: lengthInt,
@@ -121,35 +121,35 @@ func ensureUtf8(s string, fromEncoding string) string {
 }
 
 type WriteCounter struct {
-	Total uint64
-	connection *net.Conn
+	Total          uint64
+	connection     *net.Conn
 	expectedLength uint64
-	writer *io.PipeWriter
+	writer         *io.PipeWriter
 }
-// func reverseBytes(input []byte) []byte {
-//     if len(input) == 0 {
-//         return input
-//     }
-//     return append(reverseBytes(input[1:]), input[0]) 
-// }
+
+//	func reverseBytes(input []byte) []byte {
+//	    if len(input) == 0 {
+//	        return input
+//	    }
+//	    return append(reverseBytes(input[1:]), input[0])
+//	}
 func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
-	buf := bytes.NewBuffer(make([]byte,8))
+	buf := bytes.NewBuffer(make([]byte, 8))
 
 	if wc.expectedLength > 0xffffffff {
-		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())	
+		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())
 
-	}else{
-	binary.Write((*wc.connection), binary.BigEndian, buf.Bytes()[4:8])
+	} else {
+		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes()[4:8])
 
 	}
-	if wc.expectedLength == wc.Total{
+	if wc.expectedLength == wc.Total {
 		(*wc.writer).Close()
 	}
 	return n, nil
 }
-
 
 func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work bool) {
 
@@ -172,12 +172,11 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 
 	pr, pw := io.Pipe()
 	counter := &WriteCounter{
-		connection :&conn,
-		Total: 0,
+		connection:     &conn,
+		Total:          0,
 		expectedLength: parts.length,
-		writer: pw,
+		writer:         pw,
 	}
-
 
 	contentDisposition := fmt.Sprintf("attachment; filename=%s", parts.file)
 	w.Header().Set("Content-Disposition", contentDisposition)
@@ -188,7 +187,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(intLength) /*r.Header.Get("Content-Length")*/)
 
-	go io.Copy(pw, io.TeeReader( conn,w))
+	go io.Copy(pw, io.TeeReader(conn, w))
 	io.Copy(counter, pr)
 	//stream the body to the client without fully loading it into memory
 	// pbw := bufio.NewWriter(conn)
@@ -208,15 +207,12 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	//     defer pw.Close()
 
 	//     // write json data to the PipeReader through the PipeWriter
-	//    
+	//
 	// }()
 	return true
 
-	
 }
 func DCCSend(hook *webircgateway.HookIrcLine) {
-
-
 
 	//TODO DCC Send To Server
 	if hook.Halt || hook.ToServer {
@@ -240,35 +236,34 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 	}
 
 	pLen := len(m.Params)
-	
 
 	if pLen > 0 && m.Command == "PRIVMSG" && strings.HasPrefix(strings.Trim(m.GetParamU(1, ""), "\x01"), "DCC SEND") { //can be moved to plugin goto hook.dispatch("irc.line")
 
-		parts := parseSendParams(strings.Trim(m.GetParamU(1, ""), "\x01"))
+		parts := parseSendParams(strings.Trim(m.GetParam(1, ""), "\x01"))
 		parts.receiverNick = client.IrcState.Nick
 		parts.senderNick = m.Prefix.Nick
 		parts.serverHostname = client.UpstreamConfig.Hostname
 
 		//TODO when file has no extension PARTS file
-		lastIndex := strings.LastIndex(parts.file,".")
-        if(lastIndex == -1){
+		lastIndex := strings.LastIndex(parts.file, ".")
+		if lastIndex == -1 {
 			lastIndex = len(parts.file)
 		}
 
-		parts.file = strings.ToLower( slug.Make(parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick + parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)]) //long URLs may not work
-	    
+		parts.file = slug.Make(parts.receiverNick+strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick+parts.file[0:lastIndex]) + parts.file[lastIndex:len(parts.file)] //long URLs may not work
+
 		hook.Message.Command = "NOTICE"
-		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s",configs.DomainName, parts.file)
-		
+		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s", configs.DomainName, parts.file)
+
 		_, ok := configs.server.fileNames[parts.file]
-		if ok{
+		if ok {
 			client.SendClientSignal("data", hook.Message.ToLine())
 
 			return
 		}
-		
+
 		configs.server.AddFile(parts.file, *parts)
-		
+
 		client.SendClientSignal("data", hook.Message.ToLine())
 	}
 
@@ -279,31 +274,28 @@ func DCCClose(hook *webircgateway.HookGatewayClosing) {
 	configs.server.server.Shutdown(context.Background())
 
 }
-func ClientClose(hook *webircgateway.HookClientState){
-	if !hook.Connected{
+func ClientClose(hook *webircgateway.HookClientState) {
+	if !hook.Connected {
 		oldKeys := maps.Keys(configs.server.clientsMap)
 
-    for i := range oldKeys {
-        if strings.HasPrefix(oldKeys[i],hook.Client.IrcState.Nick + strings.ReplaceAll(hook.Client.UpstreamConfig.Hostname, ".", "_")) {
-			delete(configs.server.clientsMap,oldKeys[i] )
+		for i := range oldKeys {
+			if strings.HasPrefix(oldKeys[i], hook.Client.IrcState.Nick+strings.ReplaceAll(hook.Client.UpstreamConfig.Hostname, ".", "_")) {
+				delete(configs.server.clientsMap, oldKeys[i])
+			}
 		}
-    }
 
-		
 	}
 
 }
 func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	gateway.Log(1, "XDCC plugin %s", webircgateway.Version)
 
-
-
 	var configSrc interface{}
 
 	if strings.HasPrefix(gateway.Config.ConfigFile, "$ ") {
 		cmdRawOut, err := exec.Command("sh", "-c", gateway.Config.ConfigFile[2:]).Output()
 		if err != nil {
-			return 
+			return
 		}
 
 		configSrc = cmdRawOut
@@ -316,11 +308,8 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 		return
 	}
 
-	
-
 	for _, section := range cfg.Sections() {
 		if strings.Index(section.Name(), "XDCC") == 0 {
-			
 
 			configs.DomainName = section.Key("DomainName").MustString("")
 			configs.TLS = section.Key("TLS").MustBool(false)
@@ -329,16 +318,9 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 			configs.CertFile = section.Key("CertFile").MustString("")
 			configs.KeyFile = section.Key("KeyFile").MustString("")
 
-
-
 		}
 
 	}
-
-
-
-
-
 
 	if configs.TLS && configs.LetsEncryptCacheDir == "" {
 		if configs.CertFile == "" || configs.KeyFile == "" {
@@ -355,38 +337,24 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 			log.Print(3, "XDCC: Failed to listen with TLS, certificate error: %s", keyPairErr.Error())
 			return
 		}
-		configs.server.server.Addr = configs.Port;
+		configs.server.server.Addr = configs.Port
 		configs.server.server.TLSConfig = &tls.Config{
 			Certificates: []tls.Certificate{keyPair},
 		}
-		
 
-		
 	} else if configs.TLS && configs.LetsEncryptCacheDir != "" {
 		log.Print(2, "Listening with letsencrypt TLS on %s", configs.Port)
 		leManager := gateway.Acme.Get(configs.LetsEncryptCacheDir)
-		configs.server.server.Addr = configs.Port;
+		configs.server.server.Addr = configs.Port
 		configs.server.server.TLSConfig = &tls.Config{
 			GetCertificate: leManager.GetCertificate,
 		}
-		
+
 	}
-
-
-
-
-
-
-
-
-
-
-
 
 	webircgateway.HookRegister("irc.line", DCCSend)
 	webircgateway.HookRegister("gateway.closing", DCCClose)
 	webircgateway.HookRegister("client.state", ClientClose)
-
 
 	// var port = flag.String("port", "3000", "Default: 3000; Set the port for the web-server to accept incoming requests")
 	// flag.Parse()
@@ -400,8 +368,6 @@ func Start(gateway *webircgateway.Gateway, pluginsQuit *sync.WaitGroup) {
 	go configs.server.Start() //Launch server; unblocks goroutine.
 
 }
-
-
 
 func (s *Server) Start() {
 	log.Printf("XDCC: Listening on %s", s.Port)
@@ -438,18 +404,18 @@ func (s *Server) InitDispatch() {
 		parts := s.fileNames[name]
 
 		//call serveFile here
-		if serveFile(parts, w, r){ //removed go keyword this could mean servFile can only happen once
+		if serveFile(parts, w, r) { //removed go keyword this could mean servFile can only happen once
 
-		//destroy route
-		s.Destroy(parts) 
-}
+			//destroy route
+			s.Destroy(parts)
+		}
 
 	}).Methods("GET")
 }
 
 func (s *Server) Destroy(parts ParsedParts) {
-	delete(s.fileNames, parts.file) 
-	s.clientsMap[parts.receiverNick+ strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick] = remove(s.clientsMap[parts.receiverNick+ strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick],parts.file)
+	delete(s.fileNames, parts.file)
+	s.clientsMap[parts.receiverNick+strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick] = remove(s.clientsMap[parts.receiverNick+strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick], parts.file)
 }
 
 // func (s *Server) ProxyCall(w http.ResponseWriter, r *http.Request, fName string) {
@@ -465,7 +431,6 @@ func (s *Server) AddFile( /*w http.ResponseWriter, r *http.Request,*/ fName stri
 	//store the parts and the hook
 	s.fileNames[fName] = parts // Add the handler to our map
 
-	configs.server.clientsMap[parts.receiverNick  +  strings.ReplaceAll(parts.serverHostname, ".", "_") + parts.senderNick] = append(configs.server.clientsMap[parts.receiverNick  + strings.ReplaceAll(parts.serverHostname, ".", "_")+ parts.senderNick],fName)
-
+	configs.server.clientsMap[parts.receiverNick+strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick] = append(configs.server.clientsMap[parts.receiverNick+strings.ReplaceAll(parts.serverHostname, ".", "_")+parts.senderNick], fName)
 
 }

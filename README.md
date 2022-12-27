@@ -46,7 +46,7 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [ ] XDCC ACCEPT
 - [ ] XDCC REMOVE
 - [x] XDCC CANCEL
-- [ ] XDCC BATCH
+- [x] XDCC BATCH
 - [ ] XDCC QUEUE
 - [ ] XDCC INFO
 - [ ] XDCC GET
