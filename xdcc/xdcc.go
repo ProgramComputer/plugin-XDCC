@@ -86,7 +86,7 @@ type ParsedParts struct {
 }
 
 func parseSendParams(text string) *ParsedParts {
-	re := regexp.MustCompile(`/(?:[^\s"]+|"[^"]*")+/g`)
+	re := regexp.MustCompile(`(?:[^\s"]+|"[^"]*")+`)
 	replace := regexp.MustCompile(`^"(.+)"$`)
 
 	parts := re.FindAllString(text, -1)
