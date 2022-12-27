@@ -255,12 +255,7 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		hook.Message.Command = "NOTICE"
 		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s", configs.DomainName, parts.file)
 
-		_, ok := configs.server.fileNames[parts.file]
-		if ok {
-			client.SendClientSignal("data", hook.Message.ToLine())
-
-			return
-		}
+	
 
 		configs.server.AddFile(parts.file, *parts)
 
