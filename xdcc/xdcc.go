@@ -401,6 +401,7 @@ func (s *Server) InitDispatch() {
 		stringArr := strings.Split(u.Path, "/")
 		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, stringArr[0])
 		temp := template.Must(template.ParseFiles("../offline-first-example/dist/work.bundle.js"))
+		w.Header().Set("Content-Type", "text/javascript")
 
 		//set mime type to text/json
 		err = temp.Execute(w, urlocator)
