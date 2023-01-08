@@ -399,8 +399,8 @@ func (s *Server) InitDispatch() {
 			panic(err)
 		}
 		stringArr := strings.Split(u.Path, "/")
-		log.Print(stringArr[0])
-		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, stringArr[0])
+		log.Print(stringArr[1])
+		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, stringArr[1])
 		log.Print(urlocator)
 
 		temp := template.Must(template.ParseFiles("../offline-first-example/dist/work.bundle.js"))
