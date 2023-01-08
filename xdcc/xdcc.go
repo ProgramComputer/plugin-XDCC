@@ -399,6 +399,7 @@ func (s *Server) InitDispatch() {
 			panic(err)
 		}
 		stringArr := strings.Split(u.Path, "/")
+		log.Print(stringArr)
 		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, stringArr[0])
 		temp := template.Must(template.ParseFiles("../offline-first-example/dist/work.bundle.js"))
 		w.Header().Set("Content-Type", "text/javascript")
