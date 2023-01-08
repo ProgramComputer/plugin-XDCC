@@ -14,7 +14,7 @@ import (
 	"github.com/gotd/contrib/http_range"
 	"golang.org/x/exp/maps"
 	"gopkg.in/ini.v1"
-
+   "net/url"
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
@@ -392,16 +392,27 @@ func (s *Server) InitDispatch() {
 	//     name := vars["name"]
 	//     s.Destroy(name)
 	// }).Methods("GET")
+	d.HandleFunc("/offline-first-example/dist/{name}", func(w http.ResponseWriter, r *http.Request) {
+   u, err := url.Parse(r.Referer())
+    if err != nil {
+        panic(err)
+    }
+	stringArr := strings.Split(u.Path, "/")
+	urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName,configs.Port, stringArr[0])
+	temp := template.Must(template.ParseFiles("../offline-first-example/dist/work.bundle.js"))
+
+	//set mime type to text/json
+      err = temp.Execute(w, urlocator)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}).Methods("GET")
 	d.HandleFunc("/{name}/video", func(w http.ResponseWriter, r *http.Request) {
 		temp := template.Must(template.ParseGlob("../offline-first-example/dist/*"))
-		vars := mux.Vars(r)
-		name := vars["name"]
-
-		// s.ProxyCall(w, r, name)
-
-		parts := s.fileNames[name]
-		myName := fmt.Sprintf("http://%s:3000/%s", configs.DomainName, parts.file)
-		err := temp.ExecuteTemplate(w, "indexPage", myName)
+		
+		
+		err := temp.ExecuteTemplate(w, "indexPage", nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
