@@ -1,3 +1,6 @@
 [submodule "webircgateway"]
 	path = webircgateway
 	url = https://github.com/kiwiirc/webircgateway
+[submodule "offline-first-example"]
+	path = offline-first-example
+	url = https://github.com/ProgramComputer/offline-first-example

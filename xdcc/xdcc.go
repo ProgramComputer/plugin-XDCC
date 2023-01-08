@@ -25,7 +25,7 @@ import (
 	"strings"
 	"sync"
 	"unicode/utf8"
-
+    "text/template"
 	"github.com/kiwiirc/webircgateway/pkg/irc"
 	"github.com/kiwiirc/webircgateway/pkg/webircgateway"
 	"golang.org/x/net/html/charset"
@@ -391,7 +391,23 @@ func (s *Server) InitDispatch() {
 	//     name := vars["name"]
 	//     s.Destroy(name)
 	// }).Methods("GET")
+	d.HandleFunc("/{name}/video", func(w http.ResponseWriter, r *http.Request) {
+		temp := template.Must(template.ParseGlob("../offline-first-example/dist/*"))
+		vars := mux.Vars(r)
+		name := vars["name"]
 
+		// s.ProxyCall(w, r, name)
+
+		parts := s.fileNames[name]
+		myName := fmt.Sprintf("http://%s:3000/%s", configs.DomainName, parts.file)
+
+		err := temp.ExecuteTemplate(w, "indexPage", myName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		}).Methods("GET")
 	d.HandleFunc("/{name}", func(w http.ResponseWriter, r *http.Request) {
 		//Lookup handler in map and call it, proxying this writer and request
 		vars := mux.Vars(r)
