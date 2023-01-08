@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
+	"github.com/gotd/contrib/http_range"
 	"golang.org/x/exp/maps"
 	"gopkg.in/ini.v1"
 
@@ -83,6 +84,8 @@ type ParsedParts struct {
 	receiverNick   string
 	senderNick     string
 	serverHostname string
+	message        irc.Message
+	upstreamSend   chan string
 }
 
 func parseSendParams(text string) *ParsedParts {
@@ -243,6 +246,8 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		parts.receiverNick = client.IrcState.Nick
 		parts.senderNick = m.Prefix.Nick
 		parts.serverHostname = client.UpstreamConfig.Hostname
+		parts.message = *m
+		parts.upstreamSend = client.UpstreamSend
 
 		//TODO when file has no extension PARTS file
 		lastIndex := strings.LastIndex(parts.file, ".")
@@ -254,8 +259,6 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 
 		hook.Message.Command = "NOTICE"
 		hook.Message.Params[1] = fmt.Sprintf("http://%s:3000/%s", configs.DomainName, parts.file)
-
-	
 
 		configs.server.AddFile(parts.file, *parts)
 
@@ -397,6 +400,28 @@ func (s *Server) InitDispatch() {
 		// s.ProxyCall(w, r, name)
 
 		parts := s.fileNames[name]
+		ranges, err := http_range.ParseRange(r.Header.Get("Range"), int64(parts.length))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(ranges) > 0 {
+			r := ranges[0]
+			offset := r.Start
+			w.Header().Set("Content-Range", r.ContentRange(int64(parts.length)))
+			w.WriteHeader(http.StatusPartialContent)
+			passLine := fmt.Sprintf(
+				"DCC RESUME %s %d %d",
+				parts.file,
+				parts.port,
+				offset,
+			)
+			parts.message.Params[1] = passLine
+			// message, _ := irc.ParseLine(passLine)
+			// message.
+
+			parts.upstreamSend <- parts.message.ToLine()
+		}
 
 		//call serveFile here
 		if serveFile(parts, w, r) { //removed go keyword this could mean servFile can only happen once
