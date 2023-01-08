@@ -408,8 +408,8 @@ func (s *Server) InitDispatch() {
 		if len(ranges) > 0 {
 			r := ranges[0]
 			offset := r.Start
-			w.Header().Set("Content-Range", r.ContentRange(int64(parts.length)))
-			w.WriteHeader(http.StatusPartialContent)
+			// w.Header().Set("Content-Range", r.ContentRange(int64(parts.length)))
+			// w.WriteHeader(http.StatusPartialContent)
 			passLine := fmt.Sprintf(
 				"DCC RESUME %s %d %d",
 				parts.file,
