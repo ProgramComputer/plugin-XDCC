@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
@@ -50,6 +49,12 @@ type Server struct {
 	Port       string
 	server     http.Server
 }
+type Connection struct{
+mu sync.Mutex
+conn net.Conn
+
+}
+	 var conMap= make(map[string]Connection)
 type XDCCConfig struct {
 	Port                string
 	DomainName          string
@@ -116,7 +121,7 @@ func ensureUtf8(s string, fromEncoding string) string {
 
 	encoding, encErr := charset.Lookup(fromEncoding)
 	if encoding == nil {
-		println("encErr:", encErr)
+		log.Print(3,"encErr:", encErr)
 		return ""
 	}
 
@@ -126,6 +131,7 @@ func ensureUtf8(s string, fromEncoding string) string {
 }
 
 type WriteCounter struct {
+        parts          *ParsedParts
 	Total          uint64
 	connection     *net.Conn
 	expectedLength uint64
@@ -143,14 +149,16 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	wc.Total += uint64(n)
 	buf := bytes.NewBuffer(make([]byte, 8))
 
+        (*wc.connection).(*net.TCPConn).SetKeepAlive(true) 
 	if wc.expectedLength > 0xffffffff {
 		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes())
-
 	} else {
 		binary.Write((*wc.connection), binary.BigEndian, buf.Bytes()[4:8])
 
 	}
 	if wc.expectedLength == wc.Total {
+		//(*wc.parts).message.Params[1] = "DONE" 
+                //(*wc.connection).(*net.TCPConn).CloseWrite() //closes connection after transfer comment this out to keep it
 		(*wc.writer).Close()
 	}
 	return n, nil
@@ -167,9 +175,28 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 		w.Write([]byte("404 - You tried"))
 		return false
 	}
+        
+        conm,ok := conMap[parts.file]
+//conm.mu.Lock()
 	conn, err := net.Dial("tcp", ipPort)
-
-	if err != nil {
+        if ok && err != nil{
+conn = conm.conn
+}        else{
+        conm.conn = conn;
+}
+conMap[parts.file] = conm;
+	if err != nil && !ok{
+switch err := err.(type) {
+case net.Error:
+    if err.Timeout() {
+        log.Println("This was a net.Error with a Timeout")
+    }
+case *url.Error:
+    log.Println("This is a *url.Error")
+    if err, ok := err.Err.(net.Error); ok && err.Timeout() {
+        log.Println("and it was because of a timeout")
+    }
+}
 		w.WriteHeader(http.StatusBadGateway)
 		w.Write([]byte(err.Error()))
 		return false
@@ -177,6 +204,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 
 	pr, pw := io.Pipe()
 	counter := &WriteCounter{
+                parts: &parts,
 		connection:     &conn,
 		Total:          0,
 		expectedLength: parts.length,
@@ -194,6 +222,8 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 
 	go io.Copy(pw, io.TeeReader(conn, w))
 	io.Copy(counter, pr)
+
+ //conm.mu.Unlock()
 	//stream the body to the client without fully loading it into memory
 	// pbw := bufio.NewWriter(conn)
 	// pbr := bufio.NewReader(conn)
@@ -205,7 +235,7 @@ func serveFile(parts ParsedParts, w http.ResponseWriter, r *http.Request) (work 
 	// if err != nil {
 	// 	return nil, nil, err
 	// }
-	defer conn.Close()
+	//defer conn.Close()
 
 	// go func() {
 	//     // close the writer, so the reader knows there's no more data
@@ -250,7 +280,6 @@ func DCCSend(hook *webircgateway.HookIrcLine) {
 		parts.serverHostname = client.UpstreamConfig.Hostname
 		parts.message = *m
 		parts.upstreamSend = client.UpstreamSend
-
 		//TODO when file has no extension PARTS file
 		lastIndex := strings.LastIndex(parts.file, ".")
 		if lastIndex == -1 {
@@ -379,50 +408,59 @@ func (s *Server) Start() {
 func (s *Server) InitDispatch() {
 	d := s.Dispatcher
 
-	// Add handler to server's map.
-	// d.HandleFunc("/register/{name}", func(w http.ResponseWriter, r *http.Request) { //map files to name
-	//     //somewhere somehow you create the handler to be used; i'll just make an echohandler
-	//     vars := mux.Vars(r)
-	//     name := vars["name"]
-
-	//     s.AddFile(w, r, name)
-	// }).Methods("GET")
-
-	// d.HandleFunc("/destroy/{name}", func(w http.ResponseWriter, r *http.Request) {
-	//     vars := mux.Vars(r)
-	//     name := vars["name"]
-	//     s.Destroy(name)
-	// }).Methods("GET")
-	d.HandleFunc("/offline-first-example/dist/{name}", func(w http.ResponseWriter, r *http.Request) {
-		u, err := url.Parse(r.Referer())
+	d.HandleFunc("/{name}/static/{file}", func(w http.ResponseWriter, r *http.Request) {
+		_, err := url.Parse(r.Referer())
 		if err != nil {
 			panic(err)
 		}
-		stringArr := strings.Split(u.Path, "/")
-		log.Print(stringArr[1])
-		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, stringArr[1])
-		log.Print(urlocator)
+	       vars := mux.Vars(r)
+	       //name := vars["name"]
+	       file := vars["file"]
+		//urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, name)
+		//stringArr := strings.Split(u.Path, "/")
 
-		temp := template.Must(template.ParseFiles("../offline-first-example/dist/work.bundle.js"))
 		w.Header().Set("Content-Type", "text/javascript")
+		temp := template.Must(template.ParseFiles("../offline-first-example/" + file))
+		w.Header().Set("Content-Type", "text/javascript")
+                //w.Header().Set("Service-Worker-Allowed",stringArr[1])
 
 		//set mime type to text/json
-		err = temp.Execute(w, urlocator)
+		err = temp.Execute(w, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 	}).Methods("GET")
 	d.HandleFunc("/{name}/video", func(w http.ResponseWriter, r *http.Request) {
-		temp := template.Must(template.ParseFiles("../offline-first-example/dist/index.html"))
-
-		err := temp.ExecuteTemplate(w, "indexPage", nil)
+                
+	       vars := mux.Vars(r)
+	       name := vars["name"]
+		parts := s.fileNames[name]
+	if parts.ip == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - You tried"))
+		return 
+	}
+		urlocator := fmt.Sprintf("http://%s:%s/%s", configs.DomainName, configs.Port, name)
+		temp := template.Must(template.ParseFiles("../offline-first-example/index.html"))
+		err := temp.ExecuteTemplate(w, "indexPage", urlocator)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 	}).Methods("GET")
+d.HandleFunc("/{name}",func(w http.ResponseWriter, r *http.Request) {
+
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin, Accept, Authorization, Organization")
+    w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+    w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+    log.Print("OPTIONS");
+}).Methods("OPTIONS")
+
 	d.HandleFunc("/{name}", func(w http.ResponseWriter, r *http.Request) {
 		//Lookup handler in map and call it, proxying this writer and request
 		vars := mux.Vars(r)
@@ -431,36 +469,65 @@ func (s *Server) InitDispatch() {
 		// s.ProxyCall(w, r, name)
 
 		parts := s.fileNames[name]
+	if parts.ip == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - You tried"))
+		return 
+	}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+                
 		ranges, err := http_range.ParseRange(r.Header.Get("Range"), int64(parts.length))
+                
 		if err != nil {
+                      log.Print(err.Error()); 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if len(ranges) > 0 {
+                /*if parts.message.Params[1] == "DONE"{
+	intLength := int(parts.length)
+	if uint64(intLength) != parts.length {
+		panic("overflows!")
+	}
+                 rangePut := http_range.Range{0,int64(intLength)}
+                 ranges = []http_range.Range{rangePut}
+}*/
+
+		if len(ranges) > 0 && ranges[0].Start > 0 || parts.message.Params[1] == "DONE" {
+
 			r := ranges[0]
 			offset := r.Start
-			// w.Header().Set("Content-Range", r.ContentRange(int64(parts.length)))
-			// w.WriteHeader(http.StatusPartialContent)
+			w.Header().Set("Content-Range", r.ContentRange(int64(parts.length)))
+			w.WriteHeader(http.StatusPartialContent)
 			passLine := fmt.Sprintf(
 				"DCC RESUME %s %d %d",
 				parts.file,
 				parts.port,
 				offset,
 			)
+                        parts.message.Params[0] = parts.message.Prefix.Nick;
 			parts.message.Params[1] = passLine
+                        
 			// message, _ := irc.ParseLine(passLine)
 			// message.
 
 			parts.upstreamSend <- parts.message.ToLine()
+
 		}
 
 		//call serveFile here
 		if serveFile(parts, w, r) { //removed go keyword this could mean servFile can only happen once
+// end connection after transfer
+			passLine := fmt.Sprintf(
+				"XDCC CANCEL",
+			)
+                        parts.message.Params[0] = parts.message.Prefix.Nick;
+			parts.message.Params[1] = passLine
+                        
+			parts.upstreamSend <- parts.message.ToLine()
 
 			//destroy route
 			s.Destroy(parts)
 		}
-
 	}).Methods("GET")
 }
 
