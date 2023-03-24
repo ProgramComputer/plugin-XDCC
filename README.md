@@ -4,7 +4,7 @@
 ### Overview
 ![demo](./demo.gif)
 
-This plugin currently supports XDCC SEND.
+This plugin currently supports XDCC SEND. Append the '/video' to url for video playback instead.
 
 
 ### Building and development
@@ -26,7 +26,7 @@ For example,
 ```
 and under ``[XDCC]`` set the following keys
 - Port     3000
-- DomainName (REQUIRED)
+- DomainName (REQUIRED) is the domain Name of the server
 - TLS bool
   - LetsEncryptCacheDir ""
   - CertFile ""
