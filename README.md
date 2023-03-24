@@ -4,7 +4,7 @@
 ### Overview
 ![demo](./demo.gif)
 
-This plugin currently supports XDCC SEND. Append the '/video' to url for video playback instead.
+This plugin currently supports XDCC SEND. Append '/video' to url for video playback instead.
 
 
 ### Building and development
