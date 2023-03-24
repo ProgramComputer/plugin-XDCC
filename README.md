@@ -1,6 +1,8 @@
 # File sharing for [webircgateway](https://github.com/kiwiirc/webircgateway)
 **A simple plugin to do xdcc for webircgateway to IRC networks for any web client**
 
+Add this to your web server to route XDCC commands.
+
 ### Overview
 ![demo](./demo.gif)
 
