@@ -50,10 +50,10 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [ ] DCC nick
 - [ ] DCC Passive
 - [ ] DCC Trust
+- [ ] DCC ACCEPT
 - [ ] DCC Maxcps 
 - [x] XDCC SEND
 - [ ] XDCC RESUME
-- [ ] XDCC ACCEPT
 - [ ] XDCC REMOVE
 - [x] XDCC CANCEL
 - [x] XDCC BATCH
