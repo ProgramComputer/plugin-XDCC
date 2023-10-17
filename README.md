@@ -64,5 +64,5 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [x] XDCC HELP
 - [x] XDCC SEARCH
 ## License
-[ Licensed under the Apache License, Version 2.0](LICENSE).
+[ Licensed under the MIT License](LICENSE).
 
