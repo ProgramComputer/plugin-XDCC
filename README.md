@@ -43,6 +43,14 @@ DomainName = lorem.ipsum.dolor.sit
 Note- Currently SIGHUP on webircgateway will not reload this section. Webircgateway should be restarted.
 ## Commands
 - [ ] DCC SEND
+- [ ] DCC Chat
+- [ ] DCC Get
+- [ ] DCC Reject
+- [ ] DCC Ignore
+- [ ] DCC nick
+- [ ] DCC Passive
+- [ ] DCC Trust
+- [ ] DCC Maxcps 
 - [x] XDCC SEND
 - [ ] XDCC RESUME
 - [ ] XDCC ACCEPT
