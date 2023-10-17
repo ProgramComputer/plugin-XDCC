@@ -63,6 +63,9 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [x] XDCC STOP
 - [x] XDCC HELP
 - [x] XDCC SEARCH
+## Contributions
+Currently, only a few commands are supported. Any contributions to extend functionality are welcome.
+
 ## License
 [ Licensed under the MIT License](LICENSE).
 
