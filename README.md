@@ -65,7 +65,8 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [x] XDCC SEARCH
 ## Contributions
 Currently, only a few commands are supported. Any contributions to extend functionality are welcome.
-
+## Future outlook
+Currently, this is a server-side solution but when [wasi-sockets](https://github.com/WebAssembly/wasi-sockets) matures in web. It may become outdated.
 ## License
 [ Licensed under the MIT License](LICENSE).
 
