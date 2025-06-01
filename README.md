@@ -6,7 +6,7 @@ Add this to your web server to route XDCC commands.
 ### Overview
 ![demo](./demo.gif)
 
-This plugin currently supports XDCC SEND. Append '/video' to url for video playback instead.
+This plugin currently supports XDCC SEND. Append '/video' to file url for video playback.
 
 
 ### Building and development
