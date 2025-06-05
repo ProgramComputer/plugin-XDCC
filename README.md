@@ -53,7 +53,7 @@ Note- Currently SIGHUP on webircgateway will not reload this section. Webircgate
 - [ ] DCC Maxcps 
 - [x] XDCC SEND
 - [ ] XDCC ACCEPT
-- [ ] XDCC RESUME
+- [x] XDCC RESUME
 - [ ] XDCC REMOVE
 - [x] XDCC CANCEL
 - [x] XDCC BATCH
